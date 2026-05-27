@@ -52,6 +52,23 @@ RSpec.describe UserPatterns do
 
       expect(described_class.rate_limiter).to be_a(UserPatterns::RateLimiter)
     end
+
+    it 'uses MemoryStore when Rails is not defined' do
+      rails = Object.send(:remove_const, :Rails) if Object.const_defined?(:Rails)
+      begin
+        store = described_class.send(:default_cache_store)
+        expect(store).to be_a(ActiveSupport::Cache::MemoryStore)
+      ensure
+        Object.const_set(:Rails, rails) if rails
+      end
+    end
+
+    it 'uses Rails.cache when it is available' do
+      cache = ActiveSupport::Cache::MemoryStore.new
+      allow(Rails).to receive(:cache).and_return(cache)
+
+      expect(described_class.send(:default_cache_store)).to eq(cache)
+    end
   end
 
   describe '.reset!' do

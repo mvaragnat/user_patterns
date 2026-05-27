@@ -203,6 +203,88 @@ RSpec.describe 'Dashboard', type: :request do
     end
   end
 
+  describe 'GET /user_patterns/sessions' do
+    before { UserPatterns.configuration.dashboard_auth = -> {} }
+
+    it 'renders the sessions list' do
+      get '/user_patterns/sessions'
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('Sessions')
+    end
+
+    it 'lists anonymized sessions' do
+      create_event(anonymous_session_id: 'abc123def456789a', recorded_at: 1.hour.ago)
+
+      get '/user_patterns/sessions'
+
+      expect(response.body).to include('abc123de')
+      expect(response.body).to include('View timeline')
+    end
+
+    it 'filters sessions by endpoint' do
+      create_event(anonymous_session_id: 'abc123def456789a', endpoint: 'GET /tracked')
+      create_event(anonymous_session_id: 'fedcba9876543210', endpoint: 'GET /ignored')
+
+      get '/user_patterns/sessions', params: { endpoint: 'GET /tracked' }
+
+      expect(response.body).to include('abc123de')
+      expect(response.body).not_to include('fedcba98')
+    end
+  end
+
+  describe 'GET /user_patterns/sessions/:id' do
+    before { UserPatterns.configuration.dashboard_auth = -> {} }
+
+    it 'renders a condensed session timeline' do
+      base = Time.zone.parse('2026-05-27 12:00:00')
+      5.times do |i|
+        create_event(
+          anonymous_session_id: 'abc123def456789a',
+          endpoint: 'GET /poll',
+          recorded_at: base + (i * 3).seconds
+        )
+      end
+      create_event(
+        anonymous_session_id: 'abc123def456789a',
+        endpoint: 'GET /done',
+        recorded_at: base + 20.seconds
+      )
+
+      get '/user_patterns/sessions/abc123def456789a'
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('Condensed timeline')
+      expect(response.body).to include('polling')
+      expect(response.body).to include('GET /done')
+    end
+
+    it 'provides prev and next navigation between sessions' do
+      create_event(anonymous_session_id: '1111111111111111', recorded_at: 2.hours.ago)
+      create_event(anonymous_session_id: '2222222222222222', recorded_at: 1.hour.ago)
+      create_event(anonymous_session_id: '3333333333333333', recorded_at: 10.minutes.ago)
+
+      get '/user_patterns/sessions/2222222222222222'
+
+      expect(response.body).to include('Newer session')
+      expect(response.body).to include('Older session')
+      expect(response.body).to include('/user_patterns/sessions/3333333333333333')
+      expect(response.body).to include('/user_patterns/sessions/1111111111111111')
+    end
+
+    it 'returns 404 for malformed session ids' do
+      get '/user_patterns/sessions/not-valid'
+
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it 'returns 404 when the session id is valid but unknown' do
+      get '/user_patterns/sessions/0000000000000000'
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
   describe 'GET /user_patterns/stylesheet' do
     before { UserPatterns.configuration.dashboard_auth = -> {} }
 

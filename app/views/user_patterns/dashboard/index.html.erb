@@ -20,6 +20,7 @@
 
     <nav class="page-tabs">
       <a href="<%= user_patterns.root_path %>" class="active">Usage</a>
+      <a href="<%= user_patterns.sessions_path(model_type: @selected_model) %>">Sessions</a>
       <a href="<%= user_patterns.violations_path %>">Violations</a>
     </nav>
 
@@ -82,7 +83,12 @@
               <tr>
                 <td class="endpoint" title="<%= stat[:endpoint] %>"><%= stat[:endpoint] %></td>
                 <td class="num"><%= stat[:total_requests] %></td>
-                <td class="num"><%= stat[:total_sessions] %></td>
+                <td class="num">
+                  <a href="<%= user_patterns.sessions_path(model_type: @selected_model, endpoint: stat[:endpoint]) %>"
+                     title="Browse sessions for this endpoint">
+                    <%= stat[:total_sessions] %>
+                  </a>
+                </td>
                 <td class="num"><%= stat[:avg_per_session] %></td>
                 <td class="num"><%= stat[:avg_per_minute] %></td>
                 <td class="num"><%= stat[:max_per_minute] %></td>

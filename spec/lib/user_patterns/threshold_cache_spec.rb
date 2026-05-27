@@ -89,6 +89,13 @@ RSpec.describe UserPatterns::ThresholdCache do
 
       expect(Rails.logger).to have_received(:error).with(/Threshold refresh error: db gone/).at_least(:once)
     end
+
+    it 'does not raise when Rails.logger is nil' do
+      allow(UserPatterns::StatsCalculator).to receive(:compute_all).and_raise(StandardError, 'db gone')
+      allow(Rails).to receive(:logger).and_return(nil)
+
+      expect { cache.send(:safe_refresh) }.not_to raise_error
+    end
   end
 
   describe '#shutdown' do

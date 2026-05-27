@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UserPatterns — Sessions</title>
+  <link rel="stylesheet" href="<%= user_patterns.stylesheet_path %>">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>UserPatterns</h1>
+      <span class="version">v<%= UserPatterns::VERSION %></span>
+      <% if @alert_mode %>
+        <span class="mode-badge alert">Alert Mode</span>
+      <% else %>
+        <span class="mode-badge collection">Collection Mode</span>
+      <% end %>
+    </header>
+
+    <nav class="page-tabs">
+      <a href="<%= user_patterns.root_path %>">Usage</a>
+      <a href="<%= user_patterns.sessions_path %>"
+         class="<%= 'active' unless @endpoint_filter %>">Sessions</a>
+      <a href="<%= user_patterns.violations_path %>">Violations</a>
+    </nav>
+
+    <% if @model_types.any? %>
+      <nav class="tabs">
+        <% @model_types.each do |mt| %>
+          <a href="<%= user_patterns.sessions_path(session_list_params.merge(model_type: mt)) %>"
+             class="<%= 'active' if mt == @selected_model %>">
+            <%= mt %>
+          </a>
+        <% end %>
+      </nav>
+    <% end %>
+
+    <% if @endpoint_filter %>
+      <p class="session-filter-hint">
+        Showing sessions that hit
+        <code><%= @endpoint_filter %></code>
+        &middot;
+        <a href="<%= user_patterns.sessions_path(model_type: @selected_model) %>">Clear filter</a>
+      </p>
+    <% end %>
+
+    <div class="card">
+      <% if @sessions.any? %>
+        <table id="sessions-table">
+          <thead>
+            <tr>
+              <th>Session</th>
+              <th class="num">Requests</th>
+              <th>Duration</th>
+              <th>First seen</th>
+              <th>Last seen</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @sessions.each do |session| %>
+              <% duration = UserPatterns::DurationFormatter.range(session.first_at, session.last_at) %>
+              <tr>
+                <td class="mono" title="<%= session.anonymous_session_id %>">
+                  <%= session.anonymous_session_id[0, 8] %>&hellip;
+                </td>
+                <td class="num"><%= session.request_count %></td>
+                <td><%= duration %></td>
+                <td><%= session.first_at.strftime("%Y-%m-%d %H:%M:%S") %></td>
+                <td><%= session.last_at.strftime("%Y-%m-%d %H:%M:%S") %></td>
+                <td>
+                  <a href="<%= user_patterns.session_path(session.anonymous_session_id, session_list_params) %>">
+                    View timeline
+                  </a>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% else %>
+        <div class="empty-state">
+          <p>No sessions recorded yet<% if @selected_model %> for <strong><%= @selected_model %></strong><% end %>.</p>
+          <p>Logged-in traffic will appear here automatically.</p>
+        </div>
+      <% end %>
+    </div>
+
+    <% if @sessions.size >= UserPatterns::SessionCatalog::PER_PAGE %>
+      <nav class="pagination">
+        <% page = (params[:page] || 1).to_i %>
+        <% if page > 1 %>
+          <a href="<%= user_patterns.sessions_path(session_list_params.merge(page: page - 1)) %>">&larr; Newer</a>
+        <% end %>
+        <span class="pagination-label">Page <%= page %></span>
+        <a href="<%= user_patterns.sessions_path(session_list_params.merge(page: page + 1)) %>">Older &rarr;</a>
+      </nav>
+    <% end %>
+
+    <p class="footer">
+      Sessions are anonymized fingerprints &middot; newest activity first
+    </p>
+  </div>
+</body>
+</html>

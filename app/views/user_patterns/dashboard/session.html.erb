@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UserPatterns — Session <%= @summary.anonymous_session_id[0, 8] %></title>
+  <link rel="stylesheet" href="<%= user_patterns.stylesheet_path %>">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>UserPatterns</h1>
+      <span class="version">v<%= UserPatterns::VERSION %></span>
+      <% if @alert_mode %>
+        <span class="mode-badge alert">Alert Mode</span>
+      <% else %>
+        <span class="mode-badge collection">Collection Mode</span>
+      <% end %>
+    </header>
+
+    <nav class="page-tabs">
+      <a href="<%= user_patterns.root_path %>">Usage</a>
+      <a href="<%= user_patterns.sessions_path(session_list_params) %>" class="active">Sessions</a>
+      <a href="<%= user_patterns.violations_path %>">Violations</a>
+    </nav>
+
+    <nav class="session-nav">
+      <% if @neighbors[:newer] %>
+        <a class="session-nav-link"
+           href="<%= user_patterns.session_path(@neighbors[:newer].anonymous_session_id, session_list_params) %>"
+           title="<%= @neighbors[:newer].anonymous_session_id %>">
+          &larr; Newer session
+        </a>
+      <% else %>
+        <span class="session-nav-link disabled">&larr; Newer session</span>
+      <% end %>
+
+      <a href="<%= user_patterns.sessions_path(session_list_params) %>" class="session-nav-back">
+        All sessions
+      </a>
+
+      <% if @neighbors[:older] %>
+        <a class="session-nav-link"
+           href="<%= user_patterns.session_path(@neighbors[:older].anonymous_session_id, session_list_params) %>"
+           title="<%= @neighbors[:older].anonymous_session_id %>">
+          Older session &rarr;
+        </a>
+      <% else %>
+        <span class="session-nav-link disabled">Older session &rarr;</span>
+      <% end %>
+    </nav>
+
+    <div class="session-summary card">
+      <h2 class="session-title">
+        Session <span class="mono"><%= @summary.anonymous_session_id[0, 8] %>&hellip;</span>
+        <span class="session-model"><%= @summary.model_type %></span>
+      </h2>
+      <p class="session-stats">
+        <strong><%= @summary.request_count %></strong> requests
+        &middot;
+        <%= UserPatterns::DurationFormatter.range(@summary.first_at, @summary.last_at) %>
+        &middot;
+        <%= @summary.first_at.strftime("%Y-%m-%d %H:%M:%S") %>
+        &rarr;
+        <%= @summary.last_at.strftime("%Y-%m-%d %H:%M:%S") %>
+      </p>
+      <% if @endpoint_filter %>
+        <p class="session-filter-hint">
+          List filtered by <code><%= @endpoint_filter %></code>
+          &middot;
+          timeline shows full session
+        </p>
+      <% end %>
+    </div>
+
+    <div class="card timeline-card">
+      <% if @timeline.any? %>
+        <ol class="timeline">
+          <% @timeline.each do |segment| %>
+            <li class="timeline-segment timeline-<%= segment.kind %>">
+              <div class="timeline-time">
+                <% if segment.hits == 1 %>
+                  <%= segment.started_at.strftime("%H:%M:%S") %>
+                <% else %>
+                  <%= segment.started_at.strftime("%H:%M:%S") %>
+                  &ndash;
+                  <%= segment.ended_at.strftime("%H:%M:%S") %>
+                <% end %>
+              </div>
+              <div class="timeline-body">
+                <span class="timeline-endpoint" title="<%= segment.endpoint %>"><%= segment.endpoint %></span>
+                <% if segment.annotation.present? %>
+                  <span class="timeline-badge timeline-badge-<%= segment.kind %>"><%= segment.annotation %></span>
+                <% end %>
+                <% if segment.hits > 1 && segment.kind != :polling %>
+                  <span class="timeline-duration">
+                    <%= UserPatterns::DurationFormatter.compact(segment.duration_seconds) %>
+                  </span>
+                <% end %>
+              </div>
+            </li>
+          <% end %>
+        </ol>
+      <% else %>
+        <div class="empty-state">
+          <p>No actions recorded for this session.</p>
+        </div>
+      <% end %>
+    </div>
+
+    <p class="footer">
+      Condensed timeline &middot; repeated endpoints are grouped
+    </p>
+  </div>
+</body>
+</html>
